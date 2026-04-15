@@ -1,34 +1,33 @@
 pipeline {
-    // These are pre-build sections S 
+    // These are pre-build sections
     agent {
         node {
             label 'AGENT-1'
         }
     }
     environment {
-        COURSE = "jenkins"
+        COURSE = "Jenkins"
         appVersion = ""
         ACC_ID = "167819473967"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
     }
     options {
-        timeout(time: 10, unit: 'MINUTES')
+        timeout(time: 10, unit: 'MINUTES') 
         disableConcurrentBuilds()
     }
-  
-    // this is build section 
+    // This is build section
     stages {
         stage('Read Version') {
             steps {
                 script{
                     def packageJSON = readJSON file: 'package.json'
-                    appVersion = packageJSON.version 
+                    appVersion = packageJSON.version
                     echo "app version: ${appVersion}"
                 }
             }
         }
-        stage('Install Dependencies') {   
+        stage('Install Dependencies') {
             steps {
                 script{
                     sh """
@@ -39,35 +38,35 @@ pipeline {
         }
         stage('Unit Test') {
             steps {
-                script {
+                script{
                     sh """
-                        npm test 
+                        npm test
                     """
                 }
             }
         }
-        // Here you need to select scanner tool and send the analysis to server
-        // stage('Sonar Scan') {
-        //     environment {
-        //         def scannerHome = tool 'sonar-8.0'
-        //     }
-        //     steps {
-        //         script{
-        //             withSonarQubeEnv('sonar-server'){
-        //                 sh "${scannerHome}/bin/sonar-scanner"
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('Quality Gate'){
-        //     steps{
-        //         timeout(time: 1, unit: 'HOURS') {
-        //             // wait for the quality gate status
-        //             // abortPipeline: true will fail the jenkins job if the quality gate is 'FAILED'
-        //             waitForQualityGate abortPipeline: true
-        //         }
-        //     }
-        // }
+        //Here you need to select scanner tool and send the analysis to server
+        /* stage('Sonar Scan'){
+            environment {
+                def scannerHome = tool 'sonar-8.0'
+            }
+            steps {
+                script{
+                    withSonarQubeEnv('sonar-server') {
+                        sh  "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    // Wait for the quality gate status
+                    // abortPipeline: true will fail the Jenkins job if the quality gate is 'FAILED'
+                    waitForQualityGate abortPipeline: true 
+                }
+            }
+        } */
         stage('Dependabot Security Gate') {
             environment {
                 GITHUB_OWNER = 'Sreenivasulu18'
@@ -75,18 +74,20 @@ pipeline {
                 GITHUB_API   = 'https://api.github.com'
                 GITHUB_TOKEN = credentials('GITHUB_TOKEN')
             }
+
             steps {
                 script{
-                    
-                    sh """
+                    /* Use sh """ when you want to use Groovy variables inside the shell.
+                    Use sh ''' when you want the script to be treated as pure shell. */
+                    sh '''
                     echo "Fetching Dependabot alerts..."
 
                     response=$(curl -s \
-                        -H "Authorization: token $GITHUB_TOKEN" \
+                        -H "Authorization: token ${GITHUB_TOKEN}" \
                         -H "Accept: application/vnd.github+json" \
-                        "$GITHUB_API/repos/$GITHUB_OWNER/$GITHUB_REPO/dependabot/alerts?per_page=100")
+                        "${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/dependabot/alerts?per_page=100")
 
-                    echo "$response" > dependabot_alerts.json
+                    echo "${response}" > dependabot_alerts.json
 
                     high_critical_open_count=$(echo "${response}" | jq '[.[] 
                         | select(
@@ -95,8 +96,8 @@ pipeline {
                                 or .security_advisory.severity == "critical")
                         )
                     ] | length')
-                            
-                    echo "Open HIGH/CRITICAL alerts count: $high_critical_count"
+
+                    echo "Open HIGH/CRITICAL Dependabot alerts: ${high_critical_open_count}"
 
                     if [ "${high_critical_open_count}" -gt 0 ]; then
                         echo "❌ Blocking pipeline due to OPEN HIGH/CRITICAL Dependabot alerts"
@@ -110,7 +111,8 @@ pipeline {
                     else
                         echo "✅ No OPEN HIGH/CRITICAL Dependabot alerts found"
                     fi
-                    """
+                    '''
+                    
                 }
             }
         }
@@ -122,38 +124,21 @@ pipeline {
                         sh """
                             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
                             docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
-                            docker images 
+                            docker images
                             docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion}
                         """
                     }
                 }
             }
         }
-        stage('Deploy') {
-            // input {
-            //     message "Should we continue?"
-            //     ok "Yes, we should."
-            //     submitter "alice,bob"
-            //     parameters {
-            //         string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-            //     }
-            // }
-            when {
-                expression { "$params.DEPLOY" == "true" }
-            }
-            steps {
-                script{
-                    sh """
-                        echo "Deploying"
-                    """
-                }
-            }
-        }
+        
     }
-    
-    post {
-        always {
-            echo 'I will always say Hello again!' 
+
+        
+
+    post{
+        always{
+            echo 'I will always say Hello again!'
             cleanWs()
         }
         success {
@@ -167,8 +152,3 @@ pipeline {
         }
     }
 }
-
-
-
-
-
