@@ -5,7 +5,9 @@ def configMap = [
     component: "catalogue",
 ]
 
-// if branch is not equal to main, then run CI pipeline 
+
+// if branch is not equal to main, then run CI pipeline 8
+
 if ( ! env.BRANCH_NAME.equalsIgnoreCase('main') ){
     nodeJSEKSPipeline(configMap)
 }
