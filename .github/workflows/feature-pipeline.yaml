@@ -2,7 +2,7 @@ name: feature-pipeline
 on: [push]
 jobs:
   feature-pipeline:
-    uses: action-86s-test-vk/workflows/feature-nodejs-pipeline.yaml@main
+    uses: action-86s-test-vk/workflows/.github/workflows/feature-nodejs-pipeline.yaml@main
     with:
       project: roboshop 
       component: catalogue 
